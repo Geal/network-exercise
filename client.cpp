@@ -45,11 +45,12 @@ int main() {
             return 1;
         }
 
-        //Receive a reply from the server
-        if( recv(sock , server_reply , 2000 , 0) < 0) {
+        int read_size;
+        if( (read_size = recv(sock , server_reply , 2000 , 0)) < 0) {
             cout << "recv failed" << endl;
             break;
         }
+        server_reply[read_size] = 0;
 
         cout << "Server reply :" << server_reply << endl;
     }

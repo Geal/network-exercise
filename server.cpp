@@ -4,14 +4,16 @@
 #include<arpa/inet.h>
 #include<unistd.h>
 #include <iostream>
+#include <thread>
 #include "queue.h"
 
 using namespace std;
 
+void connection_thread(int& sock);
+
 int main() {
-    int socket_desc , client_sock , c , read_size;
+    int socket_desc , client_sock , c;
     struct sockaddr_in server , client;
-    char client_message[2000];
 
     socket_desc = socket(AF_INET , SOCK_STREAM , 0);
     if (socket_desc == -1) {
@@ -40,11 +42,20 @@ int main() {
         return 1;
     }
     cout << "Connection accepted" << endl;
+    std::thread t(connection_thread, std::ref(client_sock));
 
-    //Receive a message from client
-    while( (read_size = recv(client_sock , client_message , 2000 , 0)) > 0 ) {
+    t.join();
+    return 0;
+}
+
+void connection_thread(int& sock) {
+    int read_size;
+    char client_message[2000];
+
+    while( (read_size = recv(sock , client_message , 2000 , 0)) > 0 ) {
+        client_message[read_size] = 0;
         cout << "client sent:" << client_message << endl;
-        write(client_sock , client_message , strlen(client_message));
+        write(sock , client_message , read_size);
     }
 
     if(read_size == 0) {
@@ -53,6 +64,4 @@ int main() {
     } else if(read_size == -1) {
         perror("recv failed");
     }
-
-    return 0;
 }
