@@ -1,0 +1,22 @@
+1   server:
+  1  - thread parent:
+  2    - queues d'entrées et sortie
+  3    - liste id -> (queue in, queue out)
+  4    - accept
+  5      - non bloquant
+  6      - créer thread et queues
+  7      - enregistrer les queues
+  8    - pour chaque connexion
+  9      - dequeue (non bloquant)
+ 10      - broadcast
+ 11  - thread connexion:
+ 12    - read(socket) non bloquant -> enqueue(parent)
+ 13    - dequeue(parent) non bloquant -> write(socket)
+ 14    - si close, stop
+ 15 client:
+ 16   - thread ui:
+ 17     - obtenir message de l'utilisateur -> enqueue(network)
+ 18     - dequeue(network) -> afficher message
+ 19   - thread network:
+ 20     - dequeue(ui) -> write(sock)
+ 21     - read(sock) -> enqueue(ui)
