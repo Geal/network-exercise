@@ -3,19 +3,24 @@
 #include<sys/socket.h>
 #include<arpa/inet.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <iostream>
 #include <string>
 #include <sstream>
 #include <thread>
 #include <chrono>
+
 #include "queue.h"
+#include "option.h"
 
 using namespace std;
+
+void network_thread(int socket, Queue<string>& in);
 
 int main() {
     int sock;
     struct sockaddr_in server;
-    char message[1000] , server_reply[2000];
+    char message[2000];
 
     sock = socket(AF_INET , SOCK_STREAM , 0);
     if (sock == -1) {
@@ -23,39 +28,90 @@ int main() {
     }
     cout << "Socket created" << endl;
 
+    fcntl(sock, F_SETFL, O_NONBLOCK);
+
     server.sin_addr.s_addr = inet_addr("127.0.0.1");
     server.sin_family = AF_INET;
     server.sin_port = htons( 8888 );
 
     if (connect(sock , (struct sockaddr *)&server , sizeof(server)) < 0) {
-        perror("connect failed. Error");
-        return 1;
+        if (errno == EWOULDBLOCK || errno == EAGAIN || errno == EINPROGRESS) {
+            this_thread::sleep_for(chrono::milliseconds(10));
+        } else {
+            perror("connect failed");
+            //cout << "connect failed: " << errno << endl;
+
+            //fflush(stdout);
+            exit(1);
+        }
     }
 
     cout << "Connected" << endl;
 
+    Queue<string> q;
+    std::thread network(network_thread, sock, ref(q));
+
+
     //keep communicating with server
     while(1) {
-        cout << "Enter message : " << endl;
         scanf("%s" , message);
-
-        //Send some data
-        if( send(sock , message , strlen(message) , 0) < 0) {
-            cout << "Send failed" << endl;
-            return 1;
-        }
-
-        int read_size;
-        if( (read_size = recv(sock , server_reply , 2000 , 0)) < 0) {
-            cout << "recv failed" << endl;
-            break;
-        }
-        server_reply[read_size] = 0;
-
-        cout << "Server reply :" << server_reply << endl;
+        string s = string(message);
+        q.enqueue(s);
     }
 
     close(sock);
     return 0;
+}
+
+void network_thread(int socket, Queue<string>& in) {
+    char server_reply[2001];
+    int read_size;
+    cout << "network thread created" << endl;
+    while(true) {
+        auto message = in.try_dequeue(10);
+
+        if(message->is_some()) {
+            int full_size = 0;
+            while(true) {
+                read_size = write(socket, message->get().c_str(), message->get().length());
+                if(read_size == 0) {
+                    cout << "server disconnected" << endl;
+                    fflush(stdout);
+                    exit(1);
+                } else if(read_size == -1) {
+                    if (errno == EWOULDBLOCK || errno == EAGAIN) {
+                        this_thread::sleep_for(chrono::milliseconds(10));
+                        continue;
+                    } else {
+                        cout << "send failed: " << errno << endl;
+                        fflush(stdout);
+                        exit(1);
+                    }
+                } else {
+                    //message sent, not taking real size into account
+                    break;
+                }
+            }
+        }
+
+        read_size = read(socket, server_reply, 2000);
+        if(read_size == 0) {
+            cout << "server disconnected" << endl;
+            fflush(stdout);
+            exit(1);
+        } else if(read_size == -1) {
+            if (errno == EWOULDBLOCK || errno == EAGAIN) {
+                this_thread::sleep_for(chrono::milliseconds(50));
+                continue;
+            } else {
+                cout << "recv failed: " << errno << endl;
+                fflush(stdout);
+                exit(1);
+            }
+        } else {
+            server_reply[read_size] = 0;
+            cout << server_reply;
+        }
+    }
 }
 
