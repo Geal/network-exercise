@@ -64,6 +64,12 @@ public:
     }
   }
 
+  bool is_empty()
+  {
+    std::unique_lock<std::mutex> lock(m);
+    return q.empty();
+  }
+
 private:
   std::queue<T> q;
   mutable std::mutex m;
