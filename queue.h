@@ -56,6 +56,8 @@ public:
         T value = q.front();
         q.pop();
         return new Some<T>(value);
+      } else {
+        return new None<T>();
       }
     } else {
       return new None<T>();
