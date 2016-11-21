@@ -116,6 +116,7 @@ void network_thread(int socket, Queue<string>& in) {
         } else {
             server_reply[read_size] = 0;
             cout << server_reply;
+            fflush(stdout);
         }
     }
 }
