@@ -77,7 +77,6 @@ void network_thread(int socket, Queue<string>& in) {
         auto message = in.try_dequeue(10);
 
         if(message->is_some()) {
-            int full_size = 0;
             while(true) {
                 read_size = write(socket, message->get().c_str(), message->get().length());
                 if(read_size == 0) {
