@@ -21,6 +21,7 @@ int main() {
     int sock;
     struct sockaddr_in server;
     char message[2000];
+    char username[30];
 
     sock = socket(AF_INET , SOCK_STREAM , 0);
     if (sock == -1) {
@@ -50,13 +51,18 @@ int main() {
 
     Queue<string> q;
     std::thread network(network_thread, sock, ref(q));
+    this_thread::sleep_for(chrono::milliseconds(10));
 
+    cout << "Enter your username:" << endl;
+    scanf("%s", username);
 
     //keep communicating with server
     while(1) {
+        cout << "<" << username << ">\t";
         scanf("%s" , message);
-        string s = string(message);
-        q.enqueue(s);
+        ostringstream os;
+        os << "<" << username << ">\t" << message;
+        q.enqueue(os.str());
     }
 
     close(sock);
