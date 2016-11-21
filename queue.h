@@ -3,7 +3,10 @@
 
 #include <queue>
 #include <mutex>
+#include <chrono>
 #include <condition_variable>
+
+#include "option.h"
 
 template <class T>
 class Queue
@@ -35,6 +38,28 @@ public:
     T val = q.front();
     q.pop();
     return val;
+  }
+
+  Option<T> * try_dequeue(int64_t timeout_ms)
+  {
+    std::unique_lock<std::mutex> lock(m);
+
+    if(!q.empty()) {
+      T value = q.front();
+      q.pop();
+      return new Some<T>(value);
+    }
+
+    std::cv_status status = c.wait_for(lock, std::chrono::milliseconds(timeout_ms));
+    if (status == std::cv_status::no_timeout) {
+      if(!q.empty()) {
+        T value = q.front();
+        q.pop();
+        return new Some<T>(value);
+      }
+    } else {
+      return new None<T>();
+    }
   }
 
 private:
