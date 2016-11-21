@@ -20,7 +20,7 @@ void network_thread(int socket, Queue<string>& in);
 int main() {
     int sock;
     struct sockaddr_in server;
-    char message[2000];
+    char message[2001];
     char username[30];
 
     sock = socket(AF_INET , SOCK_STREAM , 0);
@@ -59,7 +59,7 @@ int main() {
     //keep communicating with server
     while(1) {
         cout << "<" << username << ">\t";
-        scanf("%s" , message);
+        fgets (message, 2000, stdin);
         ostringstream os;
         os << "<" << username << ">\t" << message;
         q.enqueue(os.str());
